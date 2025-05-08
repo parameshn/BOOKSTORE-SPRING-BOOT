@@ -1,0 +1,241 @@
+Chapter 3: Core Stereotypes: Defining Application Layers
+In the Spring Framework, the foundation of component management lies in identifying classes that Spring should instantiate, configure, and manage as beans within its application context. While the framework provides various configuration mechanisms, annotation-based configuration has become the standard for its conciseness and collocation of configuration with the code itself.
+
+At the heart of annotation-driven component scanning is the @Component annotation. However, building robust, maintainable applications often involves structuring code into logical layers (e.g., presentation, business logic, data access). To support this and provide clearer semantics, Spring offers specialized stereotype annotations that inherit from @Component. These stereotypes not only mark a class for bean definition but also convey its architectural role.
+
+This section delves into the primary stereotype annotations: @Component, @Service, @Repository, and @Controller. Understanding their purpose and appropriate usage is fundamental to building well-architected Spring applications.
+
+3.1 @Component: The Generic Stereotype
+Definition: @Component serves as the general-purpose stereotype annotation. Any class annotated with @Component becomes a candidate for auto-detection when using annotation-based configuration and classpath scanning.
+
+Purpose: It indicates that the annotated class is a "component" – a managed building block within the Spring ecosystem. It's the base annotation from which other stereotypes (@Service, @Repository, @Controller) are derived.
+
+When to Use: Use @Component for Spring-managed beans that don't logically fit into the more specific categories of service, repository, or controller. Think of it as the default choice when a more specialized stereotype doesn't apply.
+
+Common Use Cases:
+
+Utility Classes: Helper classes providing cross-cutting functionality (e.g., email senders, data validators, formatters) that aren't specific to a single layer.
+Configuration Beans: Although @Configuration is preferred for explicit Java configuration, sometimes simpler configuration-holding classes might use @Component.
+Generic Beans: Any other class you want Spring to manage that doesn't have a more specific architectural role.
+Example 3-1. A simple utility component
+
+Java
+
+package com.mycompany.myapp.util;
+
+import org.springframework.stereotype.Component;
+
+@Component
+public class AuditLogger {
+
+    public void logAction(String username, String action) {
+        System.out.println("AUDIT: User '" + username + "' performed action: " + action);
+        // In a real application, this would log to a file, database, or external system.
+    }
+}
+In this example, AuditLogger provides a general logging utility. It doesn't represent core business logic or data access, making @Component a suitable choice.
+
+3.2 @Service: Encapsulating Business Logic
+Definition: @Service is a specialization of @Component. It indicates that the annotated class fulfills a role in the business logic or service layer of the application.
+
+Purpose: Semantically, @Service marks classes that orchestrate application functionality, implement business rules, and often act as a facade between the presentation layer (controllers) and the data access layer (repositories). While functionally identical to @Component at its core (both result in a bean definition), using @Service clearly communicates the class's intent.
+
+When to Use: Annotate classes that contain core business logic, coordinate transactions, or mediate between different parts of the application.
+
+Common Use Cases:
+
+Business Rule Implementation: Classes like OrderProcessingService, UserService, or InventoryManager.
+Transaction Management: Services often define transactional boundaries for operations spanning multiple repository calls.
+Facades: Simplifying complex interactions with underlying repositories or external systems.
+Example 3-2. A typical service layer class
+
+Java
+
+package com.mycompany.myapp.service;
+
+import com.mycompany.myapp.dto.BookDTO;
+import com.mycompany.myapp.exception.ResourceNotFoundException;
+import com.mycompany.myapp.model.Book;
+import com.mycompany.myapp.repository.BookRepository;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // Often used with services
+
+@Service
+public class BookService {
+
+    private final BookRepository bookRepository;
+    // Assuming a mapper component is available via DI
+    private final BookMapper bookMapper;
+
+    // Constructor injection is preferred
+    public BookService(BookRepository bookRepository, BookMapper bookMapper) {
+        this.bookRepository = bookRepository;
+        this.bookMapper = bookMapper;
+    }
+
+    @Transactional(readOnly = true) // Example of transactional demarcation
+    public BookDTO findBookById(Long id) {
+        Book book = bookRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Book not found with id: " + id));
+        // Business logic might involve more complex checks or transformations here
+        return bookMapper.toDto(book);
+    }
+
+    @Transactional
+    public BookDTO createBook(BookDTO bookDto) {
+        // Business logic before saving (e.g., validation, default values)
+        Book newBook = bookMapper.toEntity(bookDto);
+        Book savedBook = bookRepository.save(newBook);
+        return bookMapper.toDto(savedBook);
+    }
+
+    // Other business methods...
+}
+Here, BookService encapsulates operations related to books, interacting with BookRepository and potentially applying business rules or coordinating actions.
+
+3.3 @Repository: Handling Data Access and Persistence
+Definition: @Repository is a specialization of @Component intended for classes that implement the Repository or Data Access Object (DAO) pattern. It signifies a class responsible for accessing data sources.
+
+Purpose: Beyond the semantic meaning of marking data access components, @Repository enables a crucial Spring feature: exception translation. Spring provides a technology-agnostic data access exception hierarchy (subclasses of DataAccessException). When a bean is annotated with @Repository, Spring automatically enables a persistence exception translator proxy around it. This proxy catches platform-specific exceptions (like java.sql.SQLException from JDBC or JPA provider-specific exceptions) and rethrows them as appropriate Spring DataAccessException subclasses. This allows calling code (usually services) to handle data access issues in a consistent way, without being tied to the underlying persistence technology.
+
+When to Use: Use @Repository on any class directly interacting with a data source (database, external file system, etc.). This includes DAO implementations and, commonly, Spring Data repository interfaces.
+
+Common Use Cases:
+
+Spring Data Interfaces: Interfaces extending JpaRepository, CrudRepository, MongoRepository, etc., are automatically considered repositories. While not strictly required on the interface itself if component scanning is correctly configured for Spring Data, annotating custom repository implementations with @Repository is standard practice.
+Custom DAO Implementations: Classes using JdbcTemplate, EntityManager, or other persistence APIs directly.
+Example 3-3. A Spring Data JPA repository interface
+
+Java
+
+package com.mycompany.myapp.repository;
+
+import com.mycompany.myapp.model.Book;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository; // Technically optional for interfaces with Spring Boot, but good practice
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository // Explicitly marks this interface as a repository bean
+public interface BookRepository extends JpaRepository<Book, Long> {
+
+    // Spring Data JPA automatically implements methods based on naming conventions
+    Optional<Book> findByIsbn(String isbn);
+
+    List<Book> findByAuthorLastName(String lastName);
+
+    // Custom query example (implementation generated by Spring Data)
+    // @Query("SELECT b FROM Book b WHERE b.publicationYear > :year")
+    // List<Book> findBooksPublishedAfterYear(@Param("year") int year);
+}
+Even though Spring Data often requires no explicit implementation class, the @Repository annotation (or its implicit presence via framework conventions) ensures the bean is identified and that exception translation is applied where applicable (especially if you provide custom implementations).
+
+3.4 @Controller and @RestController: Managing Web Requests
+Definition: @Controller is a specialization of @Component designed for classes handling incoming web requests in a Spring MVC (Model-View-Controller) application. @RestController is a further specialization, introduced in Spring 4, specifically for building RESTful web services.
+
+Purpose:
+
+@Controller: Primarily used in traditional web applications where handler methods return logical view names, and a ViewResolver (like Thymeleaf or JSP) renders the final HTML page. Methods often accept Model or ModelAndView arguments to pass data to the view.
+@RestController: A convenience annotation that combines @Controller and @ResponseBody. This means handler methods automatically serialize return objects (e.g., POJOs, collections) into the HTTP response body, typically as JSON or XML, without needing view resolution. It's the standard choice for building REST APIs.
+When to Use:
+
+Use @Controller when building web applications that serve HTML pages using view templates.
+Use @RestController when building RESTful APIs that primarily return data (JSON, XML) rather than rendering server-side views.
+Common Use Cases:
+
+Web Application Frontends: Handling user interactions, form submissions, and navigating between pages (@Controller).
+REST API Endpoints: Providing data for single-page applications (SPAs), mobile clients, or other services (@RestController).
+Example 3-4. A traditional Spring MVC controller
+
+Java
+
+package com.mycompany.myapp.controller;
+
+import com.mycompany.myapp.dto.BookDTO;
+import com.mycompany.myapp.service.BookService;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+
+@Controller // Marks this as a view-oriented controller
+@RequestMapping("/webapp/books") // Base path for handlers in this class
+public class BookWebController {
+
+    private final BookService bookService;
+
+    public BookWebController(BookService bookService) {
+        this.bookService = bookService;
+    }
+
+    @GetMapping("/{id}")
+    public String getBookDetails(@PathVariable Long id, Model model) {
+        BookDTO book = bookService.findBookById(id); // Fetch data via the service
+        model.addAttribute("book", book); // Add data to the model for the view
+        return "book-detail"; // Return the logical view name (e.g., book-detail.html)
+    }
+}
+Example 3-5. A RESTful API controller
+
+Java
+
+package com.mycompany.myapp.controller.api;
+
+import com.mycompany.myapp.dto.BookDTO;
+import com.mycompany.myapp.service.BookService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController // Marks this as a REST controller (combines @Controller + @ResponseBody)
+@RequestMapping("/api/v1/books") // Base path for API endpoints
+public class BookRestController {
+
+    private final BookService bookService;
+
+    public BookRestController(BookService bookService) {
+        this.bookService = bookService;
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<BookDTO> getBookById(@PathVariable Long id) {
+        BookDTO book = bookService.findBookById(id);
+        // ResponseEntity allows customizing status codes and headers
+        return ResponseEntity.ok(book); // Return BookDTO directly; Spring converts to JSON/XML
+    }
+
+    @PostMapping
+    public ResponseEntity<BookDTO> createBook(@RequestBody BookDTO bookDto) {
+         BookDTO createdBook = bookService.createBook(bookDto);
+         // Typically return 201 Created status with the created resource
+         // URI location = ... build URI to the new resource ...
+         // return ResponseEntity.created(location).body(createdBook);
+         return ResponseEntity.status(201).body(createdBook);
+    }
+
+    // Other REST endpoints (GET all, PUT, DELETE, etc.)
+}
+
+Notice the key difference: @Controller returns a String representing a view name, while @RestController returns the data object directly (or wrapped in ResponseEntity), which Spring then serializes.
+
+3.5 Layering and Choosing the Right Annotation
+These stereotype annotations are designed to support a layered architecture, promoting separation of concerns:
+
+Presentation Layer (@Controller / @RestController): Handles incoming requests, delegates to the service layer, and prepares the response (either a view or data).
+Service Layer (@Service): Contains business logic, coordinates operations, manages transactions, and interacts with repositories.
+Data Access Layer (@Repository): Responsible for persistence, interacting directly with the database or other data stores.
+Utility/Infrastructure (@Component): Provides supporting functionality used across layers.
+Summary: When to Use Which Stereotype
+
+Annotation	Layer	Primary Responsibility	Key Feature(s)
+@Component	Any / Utility	Generic Spring-managed bean	Base stereotype
+@Service	Business / Service	Implement business logic, coordination	Semantic meaning for business layer
+@Repository	Data Access	Data retrieval, storage, persistence	Exception translation, semantic meaning
+@Controller	Presentation / Web	Handle HTTP requests, return views	MVC request handling
+@RestController	Presentation / Web	Handle HTTP requests, return data (API)	Combines @Controller + @ResponseBody
+
+Export to Sheets
+Using the appropriate stereotype annotation enhances the readability and maintainability of your application. It clearly communicates the intended role of a class within the overall architecture and allows developers (and the framework itself, in the case of @Repository) to understand and leverage its specific responsibilities.

@@ -309,6 +309,30 @@ public class JwtTokenProvider {
       * @param token the JWT string
       * @return Authentication containing principal and authorities
       */
+      public Authentication getAuthentication(String token) {
+         String username = getUsernameFromToken(token);
+         Claims claims = Jwts.parserBuilder()
+                 .setSigningKey(getSigningKey())
+                 .build()
+                 .parseClaimsJws(token)
+                 .getBody();
+
+         @SuppressWarnings("unchecked")
+         List<String> roles = claims.get("roles", List.class);
+
+         List<GrantedAuthority> authorities = roles.stream()
+                 .map(SimpleGrantedAuthority::new)
+                 .collect(Collectors.toList());
+
+         UserDetails principal = org.springframework.security.core.userdetails.User
+                 .withUsername(username)
+                 .authorities(authorities)
+                 .password("") // password not needed here
+                 .build();
+
+         return new UsernamePasswordAuthenticationToken(principal, token, authorities);
+     }
+
 }
 /*
  * The Spring Security Authentication Flow (Simplified)

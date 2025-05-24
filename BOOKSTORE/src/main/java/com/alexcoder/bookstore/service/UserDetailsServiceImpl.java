@@ -58,6 +58,7 @@ import org.springframework.transaction.annotation.Transactional; // Declarative 
 import com.alexcoder.bookstore.model.User;
 import com.alexcoder.bookstore.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import java.util.stream.Collectors;
 
 /**
  * Loads user details from the database for Spring Security.
@@ -88,10 +89,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 
-        User user = userRepositroy.findByUsername(username)
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username:" + username));
 
-        var authorities = user.getRoles().stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+        //  var authorities = user.getRoles().stream().map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+        var authorities = user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                .collect(Collectors.toList());    
 
         /*
          * SimpleGrantedAuthority is a concrete implementation of Spring Security's

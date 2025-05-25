@@ -31,7 +31,7 @@ import java.util.List;
 
 public class SecurityConfig {
 
-    private final UserDetailService userDetailsService;
+    private final UserDetailsService userDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
 
     @Autowired
@@ -42,48 +42,70 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-        return http.getSharedObject(AuthenticationManagerBuilder.class) // Grab the shared AuthenticationManagerBuilder
-                // instance that Spring Security is using under
-                // the covers
-                .userDetailsService(userDetailsService) // Tell it how to load users (your UserDetailsService)…
+        // Obtain the shared AuthenticationManagerBuilder from HttpSecurity.
+        // This builder is used internally by Spring Security to configure
+        // authentication.
+        AuthenticationManagerBuilder authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
 
-                .passwordEncoder(passwordEncoder()) // …and how to verify passwords (your PasswordEncoder)
+        // Configure the AuthenticationManagerBuilder with:
+        // 1. A custom UserDetailsService to load user-specific data (like username,
+        // password, roles).
+        // 2. A PasswordEncoder to handle password hashing and verification.
+        authBuilder.userDetailsService(userDetailsService)
+                .passwordEncoder(passwordEncoder());
 
-                .and() // “.and()” returns you back to the HttpSecurity context…
-
-                .build(); // …and then build() produces a fully–initialized AuthenticationManager
-
+        // Build and return the fully initialized AuthenticationManager.
+        // This object will be used by Spring Security to authenticate users based on
+        // the above configuration.
+        return authBuilder.build();
     }
     
-    @Bean 
+    @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager authenticationManager)
             throws Exception {
+        // Create your custom JWT authentication filter, injecting AuthenticationManager
+        // and your JWT provider
         JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(authenticationManager,
                 jwtTokenProvider);
+        // Set the URL endpoint where login requests should be processed by this filter
         jwtAuthenticationFilter.setFilterProcessesUrl("/api/auth/login");
 
         http
-                //.cors().configurationSource(corsConfigurationSource())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Modern CORS configuration
-                .and()
-                // .csrf().disable() // For API usage, often disabled. In production, consider enabling with proper configuration
-                .csrf(csrf -> csrf.disable()) // Modern CSRF configuration
+                // Configure CORS using a custom source (lambda style)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // Disable CSRF since you're building a stateless REST API (make sure you
+                // understand implications)
+                .csrf(csrf -> csrf.disable())
+
+                // Authorization rules for HTTP requests
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/h2-console/**").permitAll() // Only for development
-                        .requestMatchers("/api/authors/**").hasAnyRole("USER", "ADMIN")
-                        .anyRequest().authenticated())
-                //.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                        .requestMatchers("/api/auth/**").permitAll() // Allow all to access auth endpoints (login,
+                                                                     // register)
+                        .requestMatchers("/h2-console/**").permitAll() // Allow H2 console access (typically only dev)
+                        .requestMatchers("/api/authors/**").hasAnyRole("USER", "ADMIN") // Restrict authors endpoints
+                        .anyRequest().authenticated() // All other endpoints require authentication
+                )
+
+                // Use stateless session management as is typical for JWT token-based APIs
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                // .and()
+
+                // Add the custom JWT Authentication Filter (process login and create token)
                 .addFilter(jwtAuthenticationFilter)
+
+                // Add the JWT Authorization Filter to check token on each request, before
+                // UsernamePasswordAuthenticationFilter
                 .addFilterBefore(new JwtAuthorizationFilter(jwtTokenProvider),
                         UsernamePasswordAuthenticationFilter.class);
 
-        //  http.headers().frameOptions().disable();
+        // Allow H2 console frame options (disable X-Frame-Options to allow iframe
+        // embedding for H2 console)
         http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()));
 
+        // Build and return the configured SecurityFilterChain
         return http.build();
+    
+    
         /*
          * http: This is the HttpSecurity object, which is the main entry point for
          * configuring web-based security. You chain various methods onto it to define
@@ -217,7 +239,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.satAllowedOrigins(List.of("http://localhost:3000", "https://yourdomain.com"));
+        configuration.setAllowedOrigins(List.of("http://localhost:3000", "https://yourdomain.com"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
         configuration.setExposedHeaders(List.of("Authorization"));

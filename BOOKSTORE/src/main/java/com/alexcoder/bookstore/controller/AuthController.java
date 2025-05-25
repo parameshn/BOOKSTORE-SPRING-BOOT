@@ -1,7 +1,7 @@
 package com.alexcoder.bookstore.controller;
 
 import com.alexcoder.bookstore.dto.LoginRequest;
-import com.alexcoder.bookstor.dto.RegisterRequest;
+import com.alexcoder.bookstore.dto.RegisterRequest;
 import com.alexcoder.bookstore.model.User;
 import com.alexcoder.bookstore.repository.UserRepository;
 import com.alexcoder.bookstore.security.JwtTokenProvider;
@@ -39,13 +39,13 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
-    private final PasswordEnoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
 
 
     @Autowired
     public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository,
-            PasswordEnoder passwordEncoder, JwtTokenProvider tokenProvider) {
+            PasswordEncoder passwordEncoder, JwtTokenProvider tokenProvider) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -53,16 +53,16 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest RegisterRequest) {
+    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
         // Check if username is already taken
-        if (userRepository.existsByUsername(registerRequest.getUesrname())) {
+        if (userRepository.existsByUsername(registerRequest.getUsername())) {
             Map<String, String> response = new HashMap<>();
             response.put("error", "Username is already taken");
             return ResponseEntity.badRequest().body(response);
         }
 
         // Check if email is already in use
-        if (userRepository.existsByEmail(registerRequest())) {
+        if (userRepository.existsByEmail(registerRequest.getEmail())) {
             Map<String, String> response = new HashMap<>();
             response.put("error", "Email is already in use");
             return ResponseEntity.badRequest().body(response);

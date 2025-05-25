@@ -201,7 +201,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
             */
 
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                    loginRequest.getUsername(), loginRequest.getPassword);
+                    loginRequest.getUsername(), loginRequest.getPassword());
 
             /*Exactly—both HttpServletRequest and HttpServletResponse are interfaces in the Jakarta Servlet API 
             (formerly under javax.servlet.http) that define the contract for accessing and manipulating an HTTP
@@ -235,7 +235,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
             // 3. Delegate to AuthenticationManager (your UserDetailsService + PasswordEncoder)
             return authenticationManager.authenticate(authToken);
         } catch (IOException e) {
-            throw new RuntimeErrorException("Failed to parse authentication request", e);
+            throw new RuntimeException("Failed to parse authentication request", e);
         }
     }
     

@@ -59,7 +59,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
 
-    public jwtAuthorizationFilter(JwtTokenProvider tokenProvider){
+    public JwtAuthorizationFilter(JwtTokenProvider tokenProvider){
         this.tokenProvider = tokenProvider;
     }
 
@@ -71,7 +71,7 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
         String header = request.getHeader(HEADER_STRING);
         // Check for token presence
         if (header == null || !header.startsWith(TOKEN_PREFIX)) {
-            chain.doFlter(request, response);
+            chain.doFilter(request, response);
             return;
         }
 

@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 /*
  * io.jsonwebtoken
@@ -152,9 +153,9 @@ public class JwtTokenProvider {
      * 
      * @return HMAC-SHA key for signing tokens
      */
-    private key getSigningKey() {
+    private Key getSigningKey() {
         byte[] keyBytes = jwtSecret.getBytes();
-        return keys.hmacShaKeyFor(keyBytes); //// just generates the key
+        return Keys.hmacShaKeyFor(keyBytes); //// just generates the key
 
         /*
          * The hmacShaKeyFor() method from this library is designed specifically for

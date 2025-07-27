@@ -2,6 +2,11 @@
 
 A comprehensive REST API-based bookstore management system built with Spring Boot, featuring JWT authentication and role-based access control.
 
+## 🔗 Quick Links
+
+- **GitHub Repository:** [https://github.com/parameshn/BOOKSTORE-SPRING-BOOT](https://github.com/parameshn/BOOKSTORE-SPRING-BOOT)
+- **Postman Collection:** [Bookstore API Testing Collection](https://kxld-4969301.postman.co/workspace/Paramesh-workspace~638a0202-4881-45c9-8a40-544f0617cade/collection/44593529-aaed4180-a621-4149-b826-52b77b6b6f8b?action=share&creator=44593529)
+
 ## Features
 
 - **User Authentication & Authorization**
@@ -94,7 +99,7 @@ http://localhost:8383
 ### Postman Collection
 Import the complete Postman collection for comprehensive API testing:
 
-**Collection Link:** [Bookstore API Postman Collection](your-postman-collection-link-here)
+**Collection Link:** [Bookstore API Postman Collection](https://kxld-4969301.postman.co/workspace/Paramesh-workspace~638a0202-4881-45c9-8a40-544f0617cade/collection/44593529-aaed4180-a621-4149-b826-52b77b6b6f8b?action=share&creator=44593529)
 
 The collection includes:
 - Pre-configured requests for all endpoints
@@ -226,9 +231,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 
 ## Support
 
-For technical support or questions:
-- Create an issue in the GitHub repository
-- Contact: [your-email@example.com]
+For technical support or questions, please create an issue in the GitHub repository.
 
 ---
 

@@ -37,6 +37,16 @@ public interface AuthorRepository extends JpaRepository<Author, Long> {
     //Optional<String> readByAuthorBiography(long id);
     @Query("SELECT a.biography FROM Author a WHERE a.id = :id")
     Optional<String> findBiographyById(@Param("id") Long id);
+    
+    /*You only need @Param when you're using a custom @Query with named parameters like :customerId.
+    You don’t need @Param for derived query methods like
+    :customerId is a named parameter in JPQL
+    Spring needs to know which method parameter it maps to
+    @Param("customerId") links the JPQL placeholder to the method parameter
+    Without @Param, Spring doesn’t know how to bind the values, and you’ll get an error*/
+
+
+
 
     AuthorDetails findDetailsById(Long id);
 
